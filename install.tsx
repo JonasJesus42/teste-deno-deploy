@@ -206,7 +206,9 @@ if (import.meta.main) {
     });
     
     const output = await process.output();
-    Deno.exit(output.code);
+    if (output.code !== 0) {
+      throw new Error("Erro na execução do script");
+    }
   } else {
     await installComponent(componentName, repoUrl);
   }
