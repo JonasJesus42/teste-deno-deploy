@@ -182,8 +182,7 @@ if (import.meta.main) {
     console.error("\n📘 Uso:");
     console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts <nome-do-componente>");
     console.error("\n📝 Exemplo:");
-    console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts MultiSliderRange");
-    throw new Error("Erro na execução do script");
+    console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts MultiSliderRange");;
   }
 
   const scriptExists = await exists("install-component.ts");
