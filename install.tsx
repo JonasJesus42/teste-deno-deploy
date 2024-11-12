@@ -5,7 +5,7 @@ async function downloadInstallScript(repoUrl: string): Promise<void> {
   const tempDir = await Deno.makeTempDir();
   
   try {
-    console.log("📥 Baixando script de instalação...");
+    console.log("📥 Ba1ixando script de instalação...");
     const cloneProcess = new Deno.Command("git", {
       args: ["clone", "--depth", "1", repoUrl, tempDir],
     });
