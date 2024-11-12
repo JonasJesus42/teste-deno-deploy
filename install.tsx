@@ -174,41 +174,88 @@ async function installComponent(componentName: string, repoUrl: string) {
   }
 }
 
-if (import.meta.main) {
-  const componentName = Deno.args[0];
+// Adicionar handler para requisições HTTP
+async function handler(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const componentName = url.searchParams.get("component");
 
   if (!componentName) {
-    console.error("\n❌ Erro: Nome do componente é obrigatório");
-    console.error("\n📘 Uso:");
-    console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts <nome-do-componente>");
-    console.error("\n📝 Exemplo:");
-    console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts MultiSliderRange");;
+    return new Response("Nome do componente é obrigatório", {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  const scriptExists = await exists("install-component.ts");
-  const repoUrl = "https://github.com/deco-sites/components.git";
+  try {
+    const repoUrl = "https://github.com/deco-sites/components.git";
+    const components = await listComponentsRemote(repoUrl);
+    
+    // Encontrar o componente solicitado
+    const matchingComponent = components.find(comp => 
+      comp.toLowerCase().includes(componentName.toLowerCase())
+    );
 
-  if (!scriptExists) {
-    await downloadInstallScript(repoUrl);
-    
-    // Reexecutar o script após o download
-    const process = new Deno.Command("deno", {
-      args: [
-        "run",
-        "--allow-run",
-        "--allow-read",
-        "--allow-write",
-        "--allow-net",
-        "install-component.ts",
-        componentName
-      ],
-    });
-    
-    const output = await process.output();
-    if (output.code !== 0) {
-      throw new Error("Erro na execução do script");
+    if (!matchingComponent) {
+      return new Response(JSON.stringify({
+        error: "Componente não encontrado",
+        availableComponents: components
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
-  } else {
-    await installComponent(componentName, repoUrl);
+
+    // Retornar o conteúdo do componente
+    const tempDir = await Deno.makeTempDir();
+    try {
+      const cloneProcess = new Deno.Command("git", {
+        args: [
+          "clone",
+          "--depth", "1",
+          "--filter=blob:none",
+          "--sparse",
+          repoUrl,
+          tempDir,
+        ],
+      });
+
+      await cloneProcess.output();
+
+      const sparseProcess = new Deno.Command("git", {
+        args: ["-C", tempDir, "sparse-checkout", "set", "components"],
+      });
+      await sparseProcess.output();
+
+      const pullProcess = new Deno.Command("git", {
+        args: ["-C", tempDir, "pull", "origin", "main"],
+      });
+      await pullProcess.output();
+
+      const componentContent = await Deno.readTextFile(
+        join(tempDir, matchingComponent)
+      );
+
+      return new Response(JSON.stringify({
+        component: matchingComponent,
+        content: componentContent,
+      }), {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  } catch (error) {
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
+
+// Adicionar serve handler para Deno Deploy
+Deno.serve(handler);
