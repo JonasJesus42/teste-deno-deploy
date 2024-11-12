@@ -161,7 +161,9 @@ async function installComponent(componentName: string, repoUrl: string) {
     console.error("1. Verifique se está no diretório correto do projeto");
     console.error("2. Certifique-se de que tem permissões para criar pastas e arquivos");
     console.error("3. Verifique se tem acesso ao repositório");
-    Deno.exit(1);
+
+    // Lançando erro ao invés de usar Deno.exit
+    throw error;
   } finally {
     if (tempDir) {
       console.log("\n🧹 Limpando arquivos temporários...");
@@ -183,7 +185,7 @@ if (import.meta.main) {
     console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts <nome-do-componente>");
     console.error("\n📝 Exemplo:");
     console.error("deno run --allow-run --allow-read --allow-write --allow-net scripts/install-component.ts MultiSliderRange");
-    Deno.exit(1);
+    throw new Error("Nome do componente é obrigatório.");
   }
 
   const scriptExists = await exists("install-component.ts");
@@ -192,22 +194,4 @@ if (import.meta.main) {
   if (!scriptExists) {
     await downloadInstallScript(repoUrl);
     
-    // Reexecutar o script após o download
-    const process = new Deno.Command("deno", {
-      args: [
-        "run",
-        "--allow-run",
-        "--allow-read",
-        "--allow-write",
-        "--allow-net",
-        "install-component.ts",
-        componentName
-      ],
-    });
-    
-    const output = await process.output();
-    Deno.exit(output.code);
-  } else {
-    await installComponent(componentName, repoUrl);
-  }
-}
+    // Reexecutar o scri
